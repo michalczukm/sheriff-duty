@@ -4,6 +4,7 @@ import { OperationResult, failureResult, successResult } from './result';
 type SheriffDutyAccess = {
 	get: () => Promise<OperationResult<SheriffDuty>>;
 	put: (value: SheriffDuty) => Promise<SheriffDuty>;
+	delete: () => Promise<void>;
 };
 
 type SheriffDuty = {
@@ -24,4 +25,5 @@ export const sheriffDutyStorage = (ctx: Context): SheriffDutyAccess => ({
 		await ctx.env.SHERIFF_DUTY.put(buildKey(ctx.teamId), JSON.stringify(value));
 		return value;
 	},
+	delete: () => ctx.env.SHERIFF_DUTY.delete(buildKey(ctx.teamId)),
 });

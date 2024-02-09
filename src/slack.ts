@@ -1,10 +1,10 @@
 import { Context } from './context';
 import { OperationResult, failureResult, successResult } from './result';
 import { sheriffDutyStorage } from './storage';
+import { match, P } from 'ts-pattern';
 
 export type SlackCommand = {
-	command: '/sheriff';
-} & {
+	command: '/sheriff-duty';
 	team_id: string;
 	team_domain: string;
 	channel_id: string;
@@ -72,60 +72,69 @@ const setSheriffUser = async (ctx: Context, command: SlackCommand) => {
 	});
 };
 
-const eventCallback = async (ctx: Context, event: SlackEventCallback): Promise<OperationResult> => {
-	switch (event.type) {
-		case 'app_mention':
-			try {
-				const sheriffResult = await sheriffDutyStorage(ctx).get();
+const removeSheriffUser = async (ctx: Context, _: SlackCommand) => {
+	await sheriffDutyStorage(ctx).delete();
 
-				if (sheriffResult.status === 'failure') {
-					await slackWebApi(ctx, 'chat.postMessage', {
-						channel: event.channel,
-						icon_emoji: ':trident:',
-						text: 'There is no sheriff around here! Set one using `/sheriff @user` command.',
-						username: 'sheriff-bot',
-						thread_ts: event.thread_ts,
-					});
-					return successResult({});
-				}
+	return successResult({
+		text: 'Sheriff duty has been removed! Who will be our hero 😱?',
+		response_type: 'in_channel',
+	});
+};
 
-				const currentSheriff = sheriffResult.data.current;
+const handleAppMention = async (ctx: Context, event: SlackEventCallback) => {
+	try {
+		const sheriffResult = await sheriffDutyStorage(ctx).get();
 
-				await slackWebApi(ctx, 'chat.postMessage', {
-					channel: event.channel,
-					icon_emoji: ':trident:',
-					text: `Hey <@${currentSheriff.userId}>, looks like you are a 🔱 sheriff around here!`,
-					username: 'sheriff-bot',
-					thread_ts: event.thread_ts,
-				});
-
-				return successResult({});
-			} catch (error) {
-				return failureResult([{ code: 'slack_error' }], error);
-			}
-		default:
+		if (sheriffResult.status === 'failure') {
+			await slackWebApi(ctx, 'chat.postMessage', {
+				channel: event.channel,
+				icon_emoji: ':trident:',
+				text: 'There is no sheriff around here! Set one using `/sheriff @user` command.',
+				username: 'sheriff-bot',
+				thread_ts: event.thread_ts,
+			});
 			return successResult({});
+		}
+
+		const currentSheriff = sheriffResult.data.current;
+
+		await slackWebApi(ctx, 'chat.postMessage', {
+			channel: event.channel,
+			icon_emoji: ':trident:',
+			text: `Hey <@${currentSheriff.userId}>, looks like you are a 🔱 sheriff around here!`,
+			username: 'sheriff-bot',
+			thread_ts: event.thread_ts,
+		});
+
+		return successResult({});
+	} catch (error) {
+		return failureResult([{ code: 'slack_error' }], error);
 	}
 };
 
-export const dispatchCommand = (ctx: Context, slackCommand: SlackCommand) => {
-	if (slackCommand.command !== '/sheriff') {
+const eventCallback = async (ctx: Context, event: SlackEventCallback): Promise<OperationResult> => {
+	return match(event)
+		.with({ type: 'app_mention' }, (event) => handleAppMention(ctx, event))
+		.otherwise(() => successResult({}));
+};
+
+export const dispatchCommand = async (ctx: Context, slackCommand: SlackCommand): Promise<OperationResult> => {
+	if (slackCommand.command !== '/sheriff-duty') {
 		return successResult({
 			response_type: 'ephemeral',
 			text: `Whops, I don't know how to handle this command: "${slackCommand.command}"!`,
 		});
 	}
 
-	return setSheriffUser(ctx, slackCommand);
+	return await match(slackCommand.text)
+		.with('remove', () => removeSheriffUser(ctx, slackCommand))
+		.with(P.string.regex(USER_REGEX), () => setSheriffUser(ctx, slackCommand))
+		.otherwise(() => successResult({ text: "I don't understand this command. Please use `/sheriff @user` or `/sheriff remove`." }));
 };
 
 export const dispatchEvent = async (ctx: Context, event: SlackEvent): Promise<OperationResult> => {
-	switch (event.type) {
-		case 'url_verification':
-			return successResult({ challenge: event.challenge });
-		case 'event_callback':
-			return eventCallback(ctx, event.event);
-		default:
-			return successResult({});
-	}
+	return match(event)
+		.with({ type: 'url_verification' }, (event) => successResult({ challenge: event.challenge }))
+		.with({ type: 'event_callback' }, (event) => eventCallback(ctx, event.event))
+		.otherwise(() => successResult({}));
 };

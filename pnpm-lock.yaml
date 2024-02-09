@@ -4,13 +4,18 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+dependencies:
+  itty-router:
+    specifier: ^4.0.27
+    version: 4.0.27
+  ts-pattern:
+    specifier: ^5.0.6
+    version: 5.0.6
+
 devDependencies:
   '@cloudflare/workers-types':
     specifier: ^4.20240208.0
     version: 4.20240208.0
-  itty-router:
-    specifier: ^4.0.27
-    version: 4.0.27
   typescript:
     specifier: ^5.3.3
     version: 5.3.3
@@ -537,7 +542,7 @@ packages:
 
   /itty-router@4.0.27:
     resolution: {integrity: sha512-Q3/GOE2EJvyu3hhxGN3WDWh3QNg4v7h1KFx/jSLcIOOkpSI1jUFTgGefEESXon4j5YwqCIf0DEemjiVAFSBiUw==}
-    dev: true
+    dev: false
 
   /magic-string@0.25.9:
     resolution: {integrity: sha512-RmF0AsMzgt25qzqqLc1+MbHmhdx0ojF2Fvs4XnOqz2ZOBXzzkEwc/dJQZCYHAn7v1jbVOjAZfK8msRn4BxO4VQ==}
@@ -699,6 +704,10 @@ packages:
     dependencies:
       is-number: 7.0.0
     dev: true
+
+  /ts-pattern@5.0.6:
+    resolution: {integrity: sha512-Y+jOjihlFriWzcBjncPCf2/am+Hgz7LtsWs77pWg5vQQKLQj07oNrJryo/wK2G0ndNaoVn2ownFMeoeAuReu3Q==}
+    dev: false
 
   /tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
