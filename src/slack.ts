@@ -5,6 +5,9 @@ import { sheriffDutyStorage } from './storage';
 type SlackEventCallback = {
 	type: 'app_mention';
 	channel: string;
+	text: string;
+	user: string;
+	thread_ts?: string;
 };
 
 export type SlackEvent = {
@@ -20,9 +23,20 @@ export type SlackEvent = {
 	  }
 );
 
+async function slackWebApi(ctx: Context, method: 'chat.postMessage', body: object) {
+	await fetch(`https://slack.com/api/${method}`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json; charset=utf-8',
+			Authorization: `Bearer ${ctx.env.SLACK_BOT_OAUTH_TOKEN}`,
+		},
+		body: JSON.stringify(body),
+	});
+}
+
 const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
 
-const setSheriffUser = async ({ env, teamId }: Context, command: string) => {
+const setSheriffUser = async (ctx: Context, command: string) => {
 	const match = command.match(USER_REGEX);
 	if (!match) {
 		return failureResult();
@@ -31,13 +45,21 @@ const setSheriffUser = async ({ env, teamId }: Context, command: string) => {
 	const userId = match.groups?.['user_id'];
 
 	if (!userId) {
-		return failureResult();
+		return successResult({
+			text: 'Cannot find user! Please use the format `/sheriff @user`.',
+		});
 	}
 
-	await env.SHERIFF_DUTY.put(`${teamId}_sheriff`, userId);
+	await sheriffDutyStorage(ctx).put({
+		current: {
+			userId,
+			started: new Date(),
+		},
+	});
 
 	return successResult({
-		text: `Ok! <@${userId}> is now a sheriff 🪪 around here!`,
+		text: `Duty change! <@${userId}> is now a sheriff 🔱 around here!`,
+		response_type: 'in_channel',
 	});
 };
 
@@ -45,24 +67,32 @@ const eventCallback = async (ctx: Context, event: SlackEventCallback): Promise<O
 	switch (event.type) {
 		case 'app_mention':
 			try {
-				const sheriffUserId = await sheriffDutyStorage(ctx).get();
-				await fetch('https://slack.com/api/chat.postMessage', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json; charset=utf-8',
-						Authorization: `Bearer ${ctx.env.SLACK_BOT_OAUTH_TOKEN}`,
-					},
-					body: JSON.stringify({
+				const sheriffResult = await sheriffDutyStorage(ctx).get();
+
+				if (sheriffResult.status === 'failure') {
+					await slackWebApi(ctx, 'chat.postMessage', {
 						channel: event.channel,
-						icon_emoji: ':robot_face:',
-						text: `Hey <@${sheriffUserId}>, looks like you are a sheriff 🪪 around here!`,
+						icon_emoji: ':trident:',
+						text: 'There is no sheriff around here! Set one using `/sheriff @user` command.',
 						username: 'sheriff-bot',
-					}),
+						thread_ts: event.thread_ts,
+					});
+					return successResult({});
+				}
+
+				const currentSheriff = sheriffResult.data.current;
+
+				await slackWebApi(ctx, 'chat.postMessage', {
+					channel: event.channel,
+					icon_emoji: ':trident:',
+					text: `Hey <@${currentSheriff.userId}>, looks like you are a 🔱 sheriff around here!`,
+					username: 'sheriff-bot',
+					thread_ts: event.thread_ts,
 				});
 
 				return successResult({});
 			} catch (error) {
-				return failureResult([{ code: 'slack_error' }]);
+				return failureResult([{ code: 'slack_error' }], error);
 			}
 		default:
 			return successResult({});

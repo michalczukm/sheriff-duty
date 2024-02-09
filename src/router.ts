@@ -12,7 +12,6 @@ const verifySlackRequest = (_request: IRequest) => {
 router.all('*', verifySlackRequest);
 
 router.post('/api/events', async (request, env: Env) => {
-	console.log('here!', new Date().toISOString());
 	const content = await request.json<SlackEvent>();
 
 	if (!content) {
@@ -29,14 +28,15 @@ router.post('/api/commands', async (request, env: Env) => {
 	const teamId = content.get('team_id');
 
 	if (!textParam || typeof textParam !== 'string' || !teamId || typeof teamId !== 'string') {
-		return error(400, {
+		// TODO move it do dispatchCommand
+		return json({
 			response_type: 'in_channel',
-			text: `Please provide a user to search for.`,
+			text: `Please provide a user to search for. Example: /sheriff @user.`,
 		});
 	}
 
 	const response = await dispatchCommand({ env, teamId }, textParam);
-	return json(response);
+	return response.status === 'success' ? json(response.data) : error(400, response.errors);
 });
 
 router.all('*', () => error(404, 'Not Found.'));
