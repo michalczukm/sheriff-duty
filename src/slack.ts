@@ -2,6 +2,19 @@ import { Context } from './context';
 import { OperationResult, failureResult, successResult } from './result';
 import { sheriffDutyStorage } from './storage';
 
+export type SlackCommand = {
+	command: '/sheriff';
+} & {
+	team_id: string;
+	team_domain: string;
+	channel_id: string;
+	channel_name: string;
+	user_id: string;
+	user_name: string;
+	text: string;
+	response_url: string;
+};
+
 type SlackEventCallback = {
 	type: 'app_mention';
 	channel: string;
@@ -36,17 +49,13 @@ async function slackWebApi(ctx: Context, method: 'chat.postMessage', body: objec
 
 const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
 
-const setSheriffUser = async (ctx: Context, command: string) => {
-	const match = command.match(USER_REGEX);
-	if (!match) {
-		return failureResult();
-	}
-
-	const userId = match.groups?.['user_id'];
+const setSheriffUser = async (ctx: Context, command: SlackCommand) => {
+	const match = command.text.match(USER_REGEX);
+	const userId = match?.groups?.['user_id'];
 
 	if (!userId) {
 		return successResult({
-			text: 'Cannot find user! Please use the format `/sheriff @user`.',
+			text: 'Please provide a user handler who will be next sheriff! Example: `/sheriff @user.`',
 		});
 	}
 
@@ -99,8 +108,15 @@ const eventCallback = async (ctx: Context, event: SlackEventCallback): Promise<O
 	}
 };
 
-export const dispatchCommand = (ctx: Context, command: string) => {
-	return setSheriffUser(ctx, command);
+export const dispatchCommand = (ctx: Context, slackCommand: SlackCommand) => {
+	if (slackCommand.command !== '/sheriff') {
+		return successResult({
+			response_type: 'ephemeral',
+			text: `Whops, I don't know how to handle this command: "${slackCommand.command}"!`,
+		});
+	}
+
+	return setSheriffUser(ctx, slackCommand);
 };
 
 export const dispatchEvent = async (ctx: Context, event: SlackEvent): Promise<OperationResult> => {

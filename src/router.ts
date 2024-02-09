@@ -1,5 +1,5 @@
 import { IRequest, Router, error, json } from 'itty-router';
-import { dispatchCommand, dispatchEvent, type SlackEvent } from './slack';
+import { dispatchCommand, dispatchEvent, SlackCommand, type SlackEvent } from './slack';
 
 const router = Router();
 
@@ -24,18 +24,10 @@ router.post('/api/events', async (request, env: Env) => {
 
 router.post('/api/commands', async (request, env: Env) => {
 	const content = await request.formData();
-	const textParam = content.get('text');
-	const teamId = content.get('team_id');
+	const command = Object.fromEntries(content.entries()) as SlackCommand
+	const teamId = command.team_id
 
-	if (!textParam || typeof textParam !== 'string' || !teamId || typeof teamId !== 'string') {
-		// TODO move it do dispatchCommand
-		return json({
-			response_type: 'in_channel',
-			text: `Please provide a user to search for. Example: /sheriff @user.`,
-		});
-	}
-
-	const response = await dispatchCommand({ env, teamId }, textParam);
+	const response = await dispatchCommand({ env, teamId }, command);
 	return response.status === 'success' ? json(response.data) : error(400, response.errors);
 });
 
