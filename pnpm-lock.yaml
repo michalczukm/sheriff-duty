@@ -9,14 +9,14 @@ devDependencies:
     specifier: ^4.20240208.0
     version: 4.20240208.0
   itty-router:
-    specifier: ^3.0.12
-    version: 3.0.12
+    specifier: ^4.0.27
+    version: 4.0.27
   typescript:
-    specifier: ^5.0.4
+    specifier: ^5.3.3
     version: 5.3.3
   wrangler:
-    specifier: ^3.0.0
-    version: 3.28.0(@cloudflare/workers-types@4.20240208.0)
+    specifier: ^3.28.1
+    version: 3.28.1(@cloudflare/workers-types@4.20240208.0)
 
 packages:
 
@@ -535,8 +535,8 @@ packages:
     engines: {node: '>=0.12.0'}
     dev: true
 
-  /itty-router@3.0.12:
-    resolution: {integrity: sha512-s98XTPhle6GGbaFf0kYrOD3Q8gyhnqvOqkwYijC3AmkceNKqWUp13YHg6dWmqmVv4pP7l7c94XI92I0EXVGO0w==}
+  /itty-router@4.0.27:
+    resolution: {integrity: sha512-Q3/GOE2EJvyu3hhxGN3WDWh3QNg4v7h1KFx/jSLcIOOkpSI1jUFTgGefEESXon4j5YwqCIf0DEemjiVAFSBiUw==}
     dev: true
 
   /magic-string@0.25.9:
@@ -734,8 +734,8 @@ packages:
       '@cloudflare/workerd-windows-64': 1.20240129.0
     dev: true
 
-  /wrangler@3.28.0(@cloudflare/workers-types@4.20240208.0):
-    resolution: {integrity: sha512-28lqaO4THoGyvnRtrC5+GvyFthn8E9brRSiz4sMJU8Wf5UT8JRq31Pp4leHuQ3sCzSI2yqzB4+NTo6YZaoXMfw==}
+  /wrangler@3.28.1(@cloudflare/workers-types@4.20240208.0):
+    resolution: {integrity: sha512-3O8vCzd7IC71Kciu/+oDVO0VZ83ujlUuKwmCkv6/zzt4WAoYu0vk7PyEo4WvlsSbZL8aHuv3bS917rd6TM1/9Q==}
     engines: {node: '>=16.17.0'}
     hasBin: true
     peerDependencies:

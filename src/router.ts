@@ -1,82 +1,44 @@
-import { Router } from 'itty-router';
+import { IRequest, Router, error, json } from 'itty-router';
+import { dispatchCommand, dispatchEvent, type SlackEvent } from './slack';
 
 const router = Router();
 
-// TODO: add slack requests verification using https://api.slack.com/authentication/verifying-requests-from-slack#making
+const verifySlackRequest = (_request: IRequest) => {
+	// TODO: add slack requests verification using https://api.slack.com/authentication/verifying-requests-from-slack#making
+	// request.headers.get("x-slack-signature");
+	return undefined;
+};
+
+router.all('*', verifySlackRequest);
+
 router.post('/api/events', async (request, env: Env) => {
 	console.log('here!', new Date().toISOString());
-	const content = await request.json();
+	const content = await request.json<SlackEvent>();
 
-	if (content.type == 'url_verification' && content?.challenge) {
-		return new Response(content.challenge);
-	}
-	switch (content.event.type) {
-		case 'app_mention':
-			const sheriffUserId = await env.SHERIFF_DUTY.get(`${content['team_id']}_sheriff`);
-
-			await fetch('https://slack.com/api/chat.postMessage', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json; charset=utf-8',
-					Authorization: `Bearer ${env.SLACK_BOT_OAUTH_TOKEN}`,
-				},
-				body: JSON.stringify({
-					channel: content.event.channel,
-					icon_emoji: ':robot_face:',
-					text: `Hey <@${sheriffUserId}>, looks like you are a sheriff 🪪 around here!`,
-					username: 'sheriff-bot',
-				}),
-			});
-			break;
-		default:
-			break;
+	if (!content) {
+		return error(400, "Missing content");
 	}
 
-	return new Response('', { status: 200 });
+	const response = await dispatchEvent({ env, teamId: content.team_id }, content);
+	return response.status === 'success' ? json(response.data) : error(400, response.errors);
 });
 
-const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
-const make400Response = () =>
-	new Response(
-		JSON.stringify({
-			response_type: 'in_channel',
-			text: `Please provide a user to search for.`,
-		}),
-		{ headers: { 'Content-type': 'application/json' }, status: 400 }
-	);
-
-router.post('/api/interactions', async (request, env: Env) => {
+router.post('/api/commands', async (request, env: Env) => {
 	const content = await request.formData();
 	const textParam = content.get('text');
 	const teamId = content.get('team_id');
 
 	if (!textParam || typeof textParam !== 'string' || !teamId || typeof teamId !== 'string') {
-		return make400Response();
-	}
-
-	const match = textParam.match(USER_REGEX);
-	if (!match) {
-		return make400Response();
-	}
-
-	const userId = match.groups?.['user_id'];
-
-	if (!userId) {
-		return make400Response();
-	}
-
-	await env.SHERIFF_DUTY.put(`${teamId}_sheriff`, userId);
-
-	return new Response(
-		JSON.stringify({
+		return error(400, {
 			response_type: 'in_channel',
-			text: `Ok! <@${userId}> is now a sheriff 🪪 around here!`,
-		}),
-		{ headers: { 'Content-type': 'application/json' } }
-	);
+			text: `Please provide a user to search for.`,
+		});
+	}
+
+	const response = await dispatchCommand({ env, teamId }, textParam);
+	return json(response);
 });
 
-// 404 for everything else
-router.all('*', () => new Response('Not Found.', { status: 404 }));
+router.all('*', () => error(404, 'Not Found.'));
 
 export default router;
