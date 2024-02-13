@@ -1,5 +1,6 @@
 import { Context } from './context';
 import { OperationResult, failureResult, successResult } from './result';
+import { slackWebApi } from './slack-web-api';
 import { sheriffDutyStorage } from './storage';
 import { match, P } from 'ts-pattern';
 
@@ -36,27 +37,28 @@ export type SlackEvent = {
 	  }
 );
 
-async function slackWebApi(ctx: Context, method: 'chat.postMessage', body: object) {
-	await fetch(`https://slack.com/api/${method}`, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json; charset=utf-8',
-			Authorization: `Bearer ${ctx.env.SLACK_BOT_OAUTH_TOKEN}`,
-		},
-		body: JSON.stringify(body),
-	});
-}
-
 const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
 
 const setSheriffUser = async (ctx: Context, command: SlackCommand) => {
-	// TODO: verify if the user is no bot itself 😅
+	// TODO: move command `/sheriff` from response texts to a constant
 	const match = command.text.match(USER_REGEX);
 	const userId = match?.groups?.['user_id'];
 
 	if (!userId) {
 		return successResult({
 			text: 'Please provide a user handler who will be next sheriff! Example: `/sheriff @user.`',
+		});
+	}
+
+	const identity = await slackWebApi.selfIdentity(ctx);
+
+	if (identity.status === 'failure') {
+		return failureResult(identity.errors);
+	}
+
+	if (userId === identity.data.user_id) {
+		return successResult({
+			text: `I'm sorry, <@${userId}>, but you cannot be a sheriff and a bot at the same time. 😅`,
 		});
 	}
 
@@ -87,24 +89,20 @@ const handleAppMention = async (ctx: Context, event: SlackEventCallback) => {
 		const sheriffResult = await sheriffDutyStorage(ctx).get();
 
 		if (sheriffResult.status === 'failure') {
-			await slackWebApi(ctx, 'chat.postMessage', {
+			await slackWebApi.postMessage(ctx, {
 				channel: event.channel,
-				icon_emoji: ':trident:',
 				text: 'There is no sheriff around here! Set one using `/sheriff @user` command.',
-				username: 'sheriff-bot',
-				thread_ts: event.thread_ts,
+				thread: event.thread_ts,
 			});
 			return successResult({});
 		}
 
 		const currentSheriff = sheriffResult.data.current;
 
-		await slackWebApi(ctx, 'chat.postMessage', {
+		await slackWebApi.postMessage(ctx, {
 			channel: event.channel,
-			icon_emoji: ':trident:',
 			text: `Hey <@${currentSheriff.userId}>, looks like you are a 🔱 sheriff around here!`,
-			username: 'sheriff-bot',
-			thread_ts: event.thread_ts,
+			thread: event.thread_ts,
 		});
 
 		return successResult({});
