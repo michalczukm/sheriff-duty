@@ -4,8 +4,10 @@ import { slackWebApi } from './slack-web-api';
 import { sheriffDutyStorage } from '../storage';
 import { match, P } from 'ts-pattern';
 
+const APP_COMMAND = '/sheriff-duty';
+
 export type SlackCommand = {
-	command: '/sheriff-duty';
+	command: typeof APP_COMMAND;
 	team_id: string;
 	team_domain: string;
 	channel_id: string;
@@ -40,13 +42,12 @@ export type SlackEvent = {
 const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
 
 const setSheriffUser = async (ctx: Context, command: SlackCommand) => {
-	// TODO: move command `/sheriff` from response texts to a constant
 	const match = command.text.match(USER_REGEX);
 	const userId = match?.groups?.['user_id'];
 
 	if (!userId) {
 		return successResult({
-			text: 'Please provide a user handler who will be next sheriff! Example: `/sheriff @user.`',
+			text: `Please provide a user handler who will be next sheriff! Example: \`${APP_COMMAND} @user.\``,
 		});
 	}
 
@@ -91,7 +92,7 @@ const handleAppMention = async (ctx: Context, event: SlackEventCallback) => {
 		if (sheriffResult.status === 'failure') {
 			await slackWebApi.postMessage(ctx, {
 				channel: event.channel,
-				text: 'There is no sheriff around here! Set one using `/sheriff @user` command.',
+				text: `There is no sheriff around here! Set one using \`${APP_COMMAND} @user\` command.`,
 				thread: event.thread_ts,
 			});
 			return successResult({});
@@ -118,7 +119,7 @@ const eventCallback = async (ctx: Context, event: SlackEventCallback): Promise<O
 };
 
 export const dispatchCommand = async (ctx: Context, slackCommand: SlackCommand): Promise<OperationResult> => {
-	if (slackCommand.command !== '/sheriff-duty') {
+	if (slackCommand.command !== APP_COMMAND) {
 		return successResult({
 			response_type: 'ephemeral',
 			text: `Whops, I don't know how to handle this command: "${slackCommand.command}"!`,
@@ -128,7 +129,9 @@ export const dispatchCommand = async (ctx: Context, slackCommand: SlackCommand):
 	return await match(slackCommand.text)
 		.with('remove', () => removeSheriffUser(ctx, slackCommand))
 		.with(P.string.regex(USER_REGEX), () => setSheriffUser(ctx, slackCommand))
-		.otherwise(() => successResult({ text: "I don't understand this command. Please use `/sheriff @user` or `/sheriff remove`." }));
+		.otherwise(() =>
+			successResult({ text: `I don't understand this command. Please use \`${APP_COMMAND} @user\` or \`${APP_COMMAND} remove\`.` })
+		);
 };
 
 export const dispatchEvent = async (ctx: Context, event: SlackEvent): Promise<OperationResult> => {
