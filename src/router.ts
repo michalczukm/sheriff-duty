@@ -1,13 +1,8 @@
-import { IRequest, Router, error, json } from 'itty-router';
+import { Router, error, json } from 'itty-router';
 import { dispatchCommand, dispatchEvent, SlackCommand, type SlackEvent } from './slack';
+import { verifySlackRequest } from './middleware';
 
 const router = Router();
-
-const verifySlackRequest = (_request: IRequest) => {
-	// TODO: add slack requests verification using https://api.slack.com/authentication/verifying-requests-from-slack#making
-	// request.headers.get("x-slack-signature");
-	return undefined;
-};
 
 router.all('*', verifySlackRequest);
 

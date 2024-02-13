@@ -50,6 +50,7 @@ async function slackWebApi(ctx: Context, method: 'chat.postMessage', body: objec
 const USER_REGEX = /\<@(?<user_id>\w*)\|(?<username>\w*)>$/;
 
 const setSheriffUser = async (ctx: Context, command: SlackCommand) => {
+	// TODO: verify if the user is no bot itself 😅
 	const match = command.text.match(USER_REGEX);
 	const userId = match?.groups?.['user_id'];
 

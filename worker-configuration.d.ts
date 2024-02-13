@@ -1,5 +1,6 @@
 interface Env {
 	SLACK_BOT_OAUTH_TOKEN: string;
+	SLACK_SIGNING_SECRET: string;
 	SHERIFF_DUTY: KVNamespace;
 	//
 	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
