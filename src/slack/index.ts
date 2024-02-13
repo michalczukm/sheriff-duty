@@ -1,7 +1,7 @@
-import { Context } from './context';
-import { OperationResult, failureResult, successResult } from './result';
+import { Context } from '../context';
+import { OperationResult, failureResult, successResult } from '../result';
 import { slackWebApi } from './slack-web-api';
-import { sheriffDutyStorage } from './storage';
+import { sheriffDutyStorage } from '../storage';
 import { match, P } from 'ts-pattern';
 
 export type SlackCommand = {

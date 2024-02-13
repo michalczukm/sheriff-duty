@@ -1,5 +1,5 @@
 import { Router, error, json } from 'itty-router';
-import { dispatchCommand, dispatchEvent, SlackCommand, type SlackEvent } from './slack';
+import { dispatchCommand, dispatchEvent, type SlackCommand, type SlackEvent } from './slack';
 import { verifySlackRequest } from './middleware';
 
 const router = Router();

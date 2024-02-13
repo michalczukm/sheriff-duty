@@ -1,5 +1,5 @@
-import { Context } from './context';
-import { OperationResult, failureResult, successResult } from './result';
+import { Context } from '../context';
+import { OperationResult, failureResult, successResult } from '../result';
 
 type SlackWebApiResult<TData> =
 	| ({ ok: true } & TData)
